@@ -1,3 +1,4 @@
+
 aiobotocore==2.15.2
 aiohappyeyeballs==2.4.3
 aiohttp==3.11.8
@@ -150,7 +151,6 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-multipart==0.0.19
 pytz==2024.2
-pywin32==308
 PyYAML==6.0.2
 pyzmq==26.2.0
 requests==2.32.3
@@ -203,6 +203,5 @@ wrapt==1.17.0
 yarl==1.18.0
 zc.lockfile==3.0.post1
 zipp==3.21.0
-
 pytest
 requests
