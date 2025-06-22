@@ -8,9 +8,20 @@ import joblib
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
 
+import os
+from dotenv import load_dotenv
 
-dagshub.init(repo_owner='mepaluttam', repo_name='swiggy-delivery-time-predicion', mlflow=True)
+load_dotenv()
 
+# Optionally check the token exists
+dagshub_token = os.getenv("DAGSHUB_TOKEN")
+if dagshub_token:
+    import dagshub
+    dagshub.init(
+        repo_owner='mepaluttam',
+        repo_name='swiggy-delivery-time-predicion',
+        mlflow=True
+    )
 # set the mlflow tracking server
 mlflow.set_tracking_uri("https://dagshub.com/mepaluttam/swiggy-delivery-time-predicion.mlflow")
 
