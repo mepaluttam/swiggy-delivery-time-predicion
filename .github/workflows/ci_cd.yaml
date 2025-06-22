@@ -1,4 +1,3 @@
-
 name: CI-CD
 
 on: push
@@ -34,6 +33,8 @@ jobs:
           dvc remote modify origin --local password $DAGSHUB_TOKEN
 
       - name: DVC Pull
+        env:
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         run: dvc pull
 
       - name: Test Model Registry
