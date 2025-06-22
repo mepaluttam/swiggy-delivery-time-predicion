@@ -5,20 +5,21 @@ from mlflow import MlflowClient
 import os
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
+# Optionally check the token exists
 dagshub_token = os.getenv("DAGSHUB_TOKEN")
 if dagshub_token:
+    import dagshub
     dagshub.init(
         repo_owner='mepaluttam',
         repo_name='swiggy-delivery-time-predicion',
         mlflow=True
     )
-    # Add these lines
-    os.environ['MLFLOW_TRACKING_USERNAME'] = 'mepaluttam'
-    os.environ['MLFLOW_TRACKING_PASSWORD'] = dagshub_token
-
+# set the mlflow tracking server
 mlflow.set_tracking_uri("https://dagshub.com/mepaluttam/swiggy-delivery-time-predicion.mlflow")
+
 
 
 def load_model_information(file_path):
