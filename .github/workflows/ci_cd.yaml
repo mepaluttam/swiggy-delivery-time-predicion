@@ -87,7 +87,7 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/food_delivery_time_prediction:latest
             docker stop my-app || true
             docker rm my-app || true
-            docker run -p 80:8000 --name my-app \
+            docker run -d -p 80:8000 --name my-app \
              -e DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }} \
              ${{ secrets.DOCKER_USERNAME }}/food_delivery_time_prediction:latest
 
