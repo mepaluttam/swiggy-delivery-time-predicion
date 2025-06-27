@@ -1,50 +1,43 @@
-
+import os
+import json
+import joblib
+import pandas as pd
+import mlflow
 from fastapi import FastAPI
 from pydantic import BaseModel
 from sklearn.pipeline import Pipeline
-import uvicorn
-import pandas as pd
-import mlflow
-import json
-import joblib
-from mlflow import MlflowClient
 from sklearn import set_config
-from scripts.data_clean_utils import perform_data_cleaning
-import os
+from mlflow import MlflowClient
+from dotenv import load_dotenv
 
-# set the output as pandas
+from scripts.data_clean_utils import perform_data_cleaning
+
+# ✅ Set output of sklearn to pandas DataFrame
 set_config(transform_output='pandas')
 
+# ✅ Load .env variables (like DAGSHUB_TOKEN)
+load_dotenv()
 
-
-
-# initialize dagshub
+# ✅ Authenticate DagsHub
 import dagshub
-import mlflow.client
 from dagshub.auth import add_app_token
 
-
-# ✅ Set DAGSHUB_TOKEN for dagshub client authentication
 token = os.getenv("DAGSHUB_TOKEN")
 if token:
-    print("DAGSHUB_TOKEN found:", token)
+    print("✅ DAGSHUB_TOKEN found")
     add_app_token(repo_url="https://dagshub.com", token=token)
 else:
     raise ValueError("❗ DAGSHUB_TOKEN not found in environment variables.")
 
-# ✅ Then call dagshub.init()
+# ✅ Initialize DagsHub with MLflow tracking
 dagshub.init(
     repo_owner='mepaluttam',
     repo_name='swiggy-delivery-time-predicion',
     mlflow=True
 )
-
-# set the mlflow tracking server
 mlflow.set_tracking_uri("https://dagshub.com/mepaluttam/swiggy-delivery-time-predicion.mlflow")
 
-
-
-
+# ✅ Pydantic input schema
 class Data(BaseModel):  
     ID: str
     Delivery_person_ID: str
@@ -65,77 +58,44 @@ class Data(BaseModel):
     multiple_deliveries: str
     Festival: str
     City: str
-    
+
+# ✅ Helper functions
 def load_model_information(file_path):
     with open(file_path) as f:
-        run_info = json.load(f)
-        
-    return run_info
-
+        return json.load(f)
 
 def load_model(model_path):
-    model = joblib.load(model_path)
-    return model
+    return joblib.load(model_path)
 
-# columns to preprocess in data
-
-num_cols = ["age",
-            "ratings",
-            "pickup_time_minutes",
-            "distance"]
-
-nominal_cat_cols = ['weather',
-                    'type_of_order',
-                    'type_of_vehicle',
-                    "festival",
-                    "city_type",
-                    "is_weekend",
-                    "order_time_of_day"]
-
-ordinal_cat_cols = ["traffic","distance_type"]
-
-#mlflow client
-client = MlflowClient()
-
-# load the model info to get the model name
-model_name = load_model_information("run_information.json")['model_name']
-
-# stage of the model
+# ✅ Load model and preprocessor
+model_info = load_model_information("run_information.json")
+model_name = model_info['model_name']
 stage = "Production"
 
-# get the latest model version
-# get the latest model version
+client = MlflowClient()
 latest_model_ver = client.get_latest_versions(name=model_name, stages=[stage])
-print(f"Latest model in production is version {latest_model_ver[0].version}")
+print(f"✅ Latest model in Production: version {latest_model_ver[0].version}")
 
-# load model path
 model_path = f"models:/{model_name}/{stage}"
-
-# load the latest model from model registry
 model = mlflow.sklearn.load_model(model_path)
 
-# load the preprocessor
-preprocessor_path = "models/preprocessor.joblib"
-preprocessor = load_model(preprocessor_path)
+preprocessor = load_model("models/preprocessor.joblib")
 
-# build the model pipeline
 model_pipe = Pipeline(steps=[
-    ('preprocess',preprocessor),
-    ("regressor",model)
+    ('preprocess', preprocessor),
+    ('regressor', model)
 ])
 
-# create the app
+# ✅ FastAPI app
 app = FastAPI()
 
-# create the home endpoint
-@app.get(path="/")
+@app.get("/")
 def home():
     return "Welcome to the Swiggy Food Delivery Time Prediction App"
 
-# create the predict endpoint
-@app.post(path="/predict")
+@app.post("/predict")
 def do_predictions(data: Data):
-    pred_data = pd.DataFrame({
+    input_df = pd.DataFrame({
         'ID': data.ID,
         'Delivery_person_ID': data.Delivery_person_ID,
         'Delivery_person_Age': data.Delivery_person_Age,
@@ -155,22 +115,13 @@ def do_predictions(data: Data):
         'multiple_deliveries': data.multiple_deliveries,
         'Festival': data.Festival,
         'City': data.City
+    }, index=[0])
 
+    cleaned_data = perform_data_cleaning(input_df)
+    prediction = model_pipe.predict(cleaned_data)[0]
+    return {"predicted_delivery_time": prediction}
 
-
-
-
-        },index=[0]
-    )
-    # clean the raw input data
-    cleaned_data = perform_data_cleaning(pred_data)
-    # get the predictions
-    predictions = model_pipe.predict(cleaned_data)[0]
-
-    return predictions
-
-   
+# ✅ Optional: Only for local testing
 if __name__ == "__main__":
-    uvicorn.run(app="app:app",host="0.0.0.0",port=8000)
-
-##
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=8000)
